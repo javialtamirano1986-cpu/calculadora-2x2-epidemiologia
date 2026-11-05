@@ -1,0 +1,409 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Calculadora de medidas de asociación epidemiológicas en tablas 2x2: OR, RR, IC, chi cuadrado y Fisher.">
+<title>Calculadora 2×2 de asociación</title>
+<style>
+/* Ventana tipo StatCalc: tabla de datos a la izquierda, resultados a la derecha, veredicto abajo */
+:root{
+  --bg:#dfe6ee; --win:#f4f6f9; --panel:#ffffff; --line:#9fb1c6; --line2:#c9d4e1; --frame:#7f95ad;
+  --title1:#3d6fa0; --title2:#1d3f63; --titleInk:#ffffff; --ink:#1b2430; --muted:#5b6878;
+  --head:#e8eef5; --tool:#eaf0f6; --tot:#f1f4f8; --main:#f3f7fc; --off:#9aa5b2;
+  --field:#ffffff; --cell:#fffef2; --cellLine:#6d88a6; --focus:#4a86c5;
+  --btn1:#fdfdfe; --btn2:#e1e8f0; --btnH:#d4dfeb;
+  --risk:#b3261e; --riskbg:#fdecea; --riskInk:#5c130f;
+  --prot:#1e6b3a; --protbg:#e6f4ea; --protInk:#0f3a1f;
+  --neu:#6b5a12; --neubg:#fff6d6; --neuLine:#b8961c; --neuInk:#3d3308; --warnLine:#e0c45c;
+  --accent:#2f5d8a; --shadow:rgba(20,40,70,.18);
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#111821; --win:#18212c; --panel:#1e2935; --line:#3b4d62; --line2:#2c3a4a; --frame:#3b4d62;
+  --title1:#2b5582; --title2:#173350; --titleInk:#ffffff; --ink:#e3e9f0; --muted:#9aa8b8;
+  --head:#243242; --tool:#1c2632; --tot:#212d3a; --main:#22324a; --off:#5f6d7c;
+  --field:#141c26; --cell:#1a2430; --cellLine:#5b7a9c; --focus:#6aa5e0;
+  --btn1:#2a3848; --btn2:#223040; --btnH:#30425a;
+  --risk:#ff8a80; --riskbg:#3a1a19; --riskInk:#ffd9d5;
+  --prot:#7fd59b; --protbg:#15301f; --protInk:#d3f2dc;
+  --neu:#f0d36b; --neubg:#332b10; --neuLine:#a68a2a; --neuInk:#f5e9bf; --warnLine:#a68a2a;
+  --accent:#8fbbe6; --shadow:rgba(0,0,0,.4); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111821; --win:#18212c; --panel:#1e2935; --line:#3b4d62; --line2:#2c3a4a; --frame:#3b4d62;
+  --title1:#2b5582; --title2:#173350; --titleInk:#ffffff; --ink:#e3e9f0; --muted:#9aa8b8;
+  --head:#243242; --tool:#1c2632; --tot:#212d3a; --main:#22324a; --off:#5f6d7c;
+  --field:#141c26; --cell:#1a2430; --cellLine:#5b7a9c; --focus:#6aa5e0;
+  --btn1:#2a3848; --btn2:#223040; --btnH:#30425a;
+  --risk:#ff8a80; --riskbg:#3a1a19; --riskInk:#ffd9d5;
+  --prot:#7fd59b; --protbg:#15301f; --protInk:#d3f2dc;
+  --neu:#f0d36b; --neubg:#332b10; --neuLine:#a68a2a; --neuInk:#f5e9bf; --warnLine:#a68a2a;
+  --accent:#8fbbe6; --shadow:rgba(0,0,0,.4); color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 "Segoe UI",Tahoma,Arial,sans-serif;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));padding-block:18px}
+.win{max-width:1180px;margin:0 auto;background:var(--win);border:1px solid var(--frame);box-shadow:0 4px 18px var(--shadow)}
+.titlebar{background:linear-gradient(var(--title1),var(--title2));color:var(--titleInk);padding:7px 12px;font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.titlebar small{font-weight:400;opacity:.85}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--line2);background:var(--tool)}
+.toolbar label{font-size:13px;color:var(--muted)}
+select,input[type=text]{font:inherit;padding:3px 6px;border:1px solid var(--line);background:var(--field);color:var(--ink);border-radius:2px;max-width:100%}
+button{font:inherit;font-size:13px;padding:4px 12px;border:1px solid var(--frame);background:linear-gradient(var(--btn1),var(--btn2));color:var(--ink);border-radius:2px;cursor:pointer}
+button:hover{background:var(--btnH)}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
+.grid{display:grid;grid-template-columns:minmax(0,430px) minmax(0,1fr);gap:12px;padding:12px}
+.grid>div{min-width:0}
+@media (max-width:860px){.grid{grid-template-columns:minmax(0,1fr)}}
+.box{background:var(--panel);border:1px solid var(--line);}
+.box h3{margin:0;padding:5px 10px;font-size:13px;background:var(--head);border-bottom:1px solid var(--line2);color:var(--accent);letter-spacing:.2px}
+.box .in{padding:10px;overflow-x:auto}
+.labels{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 8px;align-items:center;font-size:13px;margin-bottom:10px}
+.labels input{width:100%}
+table{border-collapse:collapse;width:100%}
+.ct td,.ct th{border:1px solid var(--line2);padding:4px 6px;text-align:center}
+.ct th{background:var(--head);font-weight:600;font-size:12.5px}
+.ct .rowh{text-align:left;background:var(--head);font-weight:600;font-size:12.5px}
+.ct input.cell{width:100%;min-width:52px;text-align:center;font:600 18px/1.2 Consolas,monospace;padding:6px 2px;border:1px solid var(--cellLine);background:var(--cell);color:var(--ink)}
+.ct input.cell:focus{outline:2px solid var(--focus);background:var(--field)}
+.ct .tot{background:var(--tot);font:600 15px Consolas,monospace}
+.ct .pct{display:block;font:400 11px "Segoe UI",sans-serif;color:var(--muted)}
+.ct .letter{display:block;font:italic 11px Georgia,serif;color:var(--muted)}
+.res td,.res th{border-bottom:1px solid var(--line2);padding:4px 8px;text-align:right;font-family:Consolas,monospace;font-size:13.5px;font-variant-numeric:tabular-nums}
+.res th{background:var(--head);font-family:"Segoe UI",sans-serif;font-size:12.5px;font-weight:600}
+.res td:first-child,.res th:first-child{text-align:left;font-family:"Segoe UI",sans-serif}
+.res tr.main td{background:var(--main);font-weight:700}
+.res tr.off td{color:var(--off)}
+.note{font-size:12px;color:var(--muted);margin:6px 0 0}
+.verdict{margin:12px;padding:14px 16px;border:1px solid;border-left-width:6px;font-size:15px}
+.verdict h2{margin:0 0 4px;font-size:19px}
+.v-risk{background:var(--riskbg);border-color:var(--risk);color:var(--riskInk)}.v-risk h2{color:var(--risk)}
+.v-prot{background:var(--protbg);border-color:var(--prot);color:var(--protInk)}.v-prot h2{color:var(--prot)}
+.v-neu{background:var(--neubg);border-color:var(--neuLine);color:var(--neuInk)}.v-neu h2{color:var(--neu)}
+.v-empty{background:var(--panel);border-color:var(--line);color:var(--muted)}
+.warn{margin:8px 12px 0;padding:7px 10px;background:var(--neubg);color:var(--neuInk);border:1px solid var(--warnLine);font-size:13px}
+details{margin:0 12px 12px;background:var(--panel);border:1px solid var(--line)}
+summary{cursor:pointer;padding:6px 10px;background:var(--head);font-weight:600;color:var(--accent);font-size:13px}
+.steps{padding:10px 14px;font:13px/1.7 Consolas,monospace;overflow-x:auto}
+.steps b{color:var(--accent)}
+.foot{padding:6px 12px 12px;font-size:12px;color:var(--muted)}
+.sig{font-family:"Segoe UI",sans-serif;font-size:12px;font-weight:600}
+.sig.y{color:var(--risk)} .sig.n{color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="win">
+  <div class="titlebar">
+    <span>StatCalc · Tablas 2×2 — Medidas de asociación</span>
+    <small>Epidemiología y Estadística · Lic. en Educación para la Salud · UNJu</small>
+  </div>
+
+  <div class="toolbar">
+    <label>Tipo de estudio
+      <select id="design">
+        <option value="cohorte">Cohorte (incidencias → RR)</option>
+        <option value="cc">Casos y controles (→ OR)</option>
+        <option value="trans">Transversal (prevalencias → RP / OR)</option>
+      </select>
+    </label>
+    <label>Nivel de confianza
+      <select id="conf">
+        <option value="1.644854">90 %</option>
+        <option value="1.959964" selected>95 %</option>
+        <option value="2.575829">99 %</option>
+      </select>
+    </label>
+    <button id="ex1">Cargar ejemplo (Mamadera / Pecho)</button>
+    <button id="clear">Limpiar</button>
+  </div>
+
+  <div class="grid">
+    <!-- IZQUIERDA: tabla -->
+    <div>
+      <div class="box">
+        <h3>Datos</h3>
+        <div class="in">
+          <div class="labels">
+            <span>Factor / exposición:</span><input type="text" id="lExp" value="Exposición">
+            <span>Expuestos:</span><input type="text" id="lE1" value="Expuestos">
+            <span>No expuestos:</span><input type="text" id="lE0" value="No expuestos">
+            <span>Evento / enfermedad:</span><input type="text" id="lOut" value="Enfermedad">
+          </div>
+          <table class="ct">
+            <tr><th rowspan="2" id="hExp">Exposición</th><th colspan="2" id="hOut">Enfermedad</th><th rowspan="2">Total</th></tr>
+            <tr><th id="hO1">Sí</th><th id="hO0">No</th></tr>
+            <tr><td class="rowh" id="rE1">Expuestos</td>
+              <td><span class="letter">a</span><input class="cell" id="a" inputmode="numeric"></td>
+              <td><span class="letter">b</span><input class="cell" id="b" inputmode="numeric"></td>
+              <td class="tot"><span class="letter">a+b</span><span id="n1">–</span><span class="pct" id="pn1"></span></td></tr>
+            <tr><td class="rowh" id="rE0">No expuestos</td>
+              <td><span class="letter">c</span><input class="cell" id="c" inputmode="numeric"></td>
+              <td><span class="letter">d</span><input class="cell" id="d" inputmode="numeric"></td>
+              <td class="tot"><span class="letter">c+d</span><span id="n0">–</span><span class="pct" id="pn0"></span></td></tr>
+            <tr><td class="rowh">Total</td>
+              <td class="tot"><span class="letter">a+c</span><span id="m1">–</span><span class="pct" id="pm1"></span></td>
+              <td class="tot"><span class="letter">b+d</span><span id="m0">–</span><span class="pct" id="pm0"></span></td>
+              <td class="tot"><span class="letter">n</span><span id="nn">–</span></td></tr>
+          </table>
+          <p class="note">Cargá los cuatro valores centrales (a, b, c, d). Los totales marginales y todos los resultados se calculan solos.</p>
+        </div>
+      </div>
+
+      <div class="box" style="margin-top:12px">
+        <h3>Porcentajes por fila / columna</h3>
+        <div class="in">
+          <table class="res" id="pctTable"><tr><td>—</td></tr></table>
+        </div>
+      </div>
+
+      <div class="box" style="margin-top:12px">
+        <h3>Frecuencias esperadas (bajo H₀)</h3>
+        <div class="in">
+          <table class="res" id="expTable"><tr><td>—</td></tr></table>
+          <p class="note">Si alguna esperada es &lt; 5, conviene usar la prueba exacta de Fisher.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- DERECHA: resultados -->
+    <div>
+      <div class="box">
+        <h3>Análisis de tabla simple</h3>
+        <div class="in">
+          <table class="res">
+            <tr><th>Medida</th><th>Estimación</th><th id="hLo">Inf. IC 95 %</th><th id="hHi">Sup. IC 95 %</th></tr>
+            <tbody id="measBody"><tr><td colspan="4">—</td></tr></tbody>
+          </table>
+          <p class="note" id="measNote"></p>
+        </div>
+      </div>
+
+      <div class="box" style="margin-top:12px">
+        <h3>Pruebas estadísticas (H₀: no hay asociación)</h3>
+        <div class="in">
+          <table class="res">
+            <tr><th>Prueba</th><th>Valor χ²</th><th>p (1 cola)</th><th>p (2 colas)</th><th></th></tr>
+            <tbody id="testBody"><tr><td colspan="5">—</td></tr></tbody>
+          </table>
+          <p class="note">gl = 1 · Valor crítico χ² (α = 0,05) = 3,841 · Se rechaza H₀ si χ² ≥ valor crítico, o lo que es lo mismo, si p &lt; 0,05.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="warns"></div>
+  <div class="verdict v-empty" id="verdict"><h2>Interpretación</h2>Ingresá los cuatro valores de la tabla para obtener el resultado.</div>
+
+  <details>
+    <summary>Ver desarrollo de las fórmulas (paso a paso)</summary>
+    <div class="steps" id="steps">—</div>
+  </details>
+
+  <div class="foot">
+    IC del OR: método de Woolf (logarítmico) · IC del RR: método de Katz (logarítmico) · χ² sin corrección: n(ad−bc)²/[(a+b)(c+d)(a+c)(b+d)] ·
+    Yates: n(|ad−bc|−n/2)²/[…] · Mantel-Haenszel: (n−1)(ad−bc)²/[…] · Fisher: distribución hipergeométrica exacta.
+    Si alguna celda vale 0, los IC se calculan sumando 0,5 a cada celda (corrección de Haldane).
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const fmt = (x, d=4) => (x===null || !isFinite(x)) ? "—" : x.toFixed(d).replace(".", ",");
+const fmtP = p => (p===null || !isFinite(p)) ? "—" : (p < 0.0000001 ? "< 0,0000001" : p.toFixed(7).replace(".", ","));
+const pc = x => isFinite(x) ? (x*100).toFixed(2).replace(".", ",") + " %" : "—";
+
+// erfc (Numerical Recipes, error < 1.2e-7)
+function erfc(x){
+  const z=Math.abs(x), t=1/(1+0.5*z);
+  const r=t*Math.exp(-z*z-1.26551223+t*(1.00002368+t*(0.37409196+t*(0.09678418+t*(-0.18628806+
+    t*(0.27886807+t*(-1.13520398+t*(1.48851587+t*(-0.82215223+t*0.17087277)))))))));
+  return x>=0 ? r : 2-r;
+}
+const pChi1 = chi => erfc(Math.sqrt(chi/2));           // p de χ² con 1 gl
+
+function lnFactTable(n){ const t=new Float64Array(n+1); for(let i=2;i<=n;i++) t[i]=t[i-1]+Math.log(i); return t; }
+function fisher(a,b,c,d){
+  const n1=a+b, n0=c+d, m1=a+c, n=n1+n0, lf=lnFactTable(n);
+  const lnC=(N,k)=>lf[N]-lf[k]-lf[N-k];
+  const lo=Math.max(0,m1-n0), hi=Math.min(n1,m1), den=lnC(n,m1);
+  const P=x=>Math.exp(lnC(n1,x)+lnC(n0,m1-x)-den);
+  const pObs=P(a); let two=0, left=0, right=0;
+  for(let x=lo;x<=hi;x++){ const p=P(x); if(p<=pObs*(1+1e-7)) two+=p; if(x<=a) left+=p; if(x>=a) right+=p; }
+  return {two:Math.min(1,two), one:Math.min(1,Math.min(left,right))};
+}
+
+function readCells(){
+  const v=["a","b","c","d"].map(k=>{ const s=$(k).value.trim(); if(s==="") return null; const x=Number(s.replace(",", ".")); return (Number.isInteger(x)&&x>=0)?x:NaN; });
+  return v;
+}
+
+function updateLabels(){
+  const design=$("design").value;
+  $("hExp").textContent=$("lExp").value||"Exposición";
+  $("hOut").textContent=$("lOut").value||"Enfermedad";
+  $("rE1").textContent=$("lE1").value||"Expuestos";
+  $("rE0").textContent=$("lE0").value||"No expuestos";
+  if(design==="cc"){ $("hO1").textContent="Casos"; $("hO0").textContent="Controles"; }
+  else { $("hO1").textContent="Sí"; $("hO0").textContent="No"; }
+  const lvl={"1.644854":"90","1.959964":"95","2.575829":"99"}[$("conf").value];
+  $("hLo").textContent="Inf. IC "+lvl+" %"; $("hHi").textContent="Sup. IC "+lvl+" %";
+}
+
+function clearOut(msg){
+  ["n1","n0","m1","m0","nn"].forEach(k=>$(k).textContent="–");
+  ["pn1","pn0","pm1","pm0"].forEach(k=>$(k).textContent="");
+  $("measBody").innerHTML='<tr><td colspan="4">—</td></tr>';
+  $("testBody").innerHTML='<tr><td colspan="5">—</td></tr>';
+  $("pctTable").innerHTML='<tr><td>—</td></tr>'; $("expTable").innerHTML='<tr><td>—</td></tr>';
+  $("steps").textContent="—"; $("warns").innerHTML=""; $("measNote").textContent="";
+  const v=$("verdict"); v.className="verdict v-empty"; v.innerHTML="<h2>Interpretación</h2>"+(msg||"Ingresá los cuatro valores de la tabla para obtener el resultado.");
+}
+
+function calc(){
+  updateLabels();
+  const cells=readCells();
+  if(cells.some(x=>Number.isNaN(x))) return clearOut("Los valores deben ser números enteros iguales o mayores que 0.");
+  const [a,b,c,d]=cells;
+  // marginales parciales aunque falten celdas
+  const show=(id,val)=>$(id).textContent=(val===null?"–":val);
+  const sum=(x,y)=>(x===null||y===null)?null:x+y;
+  show("n1",sum(a,b)); show("n0",sum(c,d)); show("m1",sum(a,c)); show("m0",sum(b,d));
+  if(cells.some(x=>x===null)) { $("nn").textContent="–"; return clearOut(); }
+
+  const n1=a+b, n0=c+d, m1=a+c, m0=b+d, n=n1+n0, z=Number($("conf").value);
+  const lvl={"1.644854":"90","1.959964":"95","2.575829":"99"}[$("conf").value];
+  $("nn").textContent=n;
+  $("pn1").textContent=pc(n1/n); $("pn0").textContent=pc(n0/n); $("pm1").textContent=pc(m1/n); $("pm0").textContent=pc(m0/n);
+  if(n1===0||n0===0||m1===0||m0===0) return clearOut("Hay un total marginal igual a 0: no es posible calcular medidas de asociación.");
+
+  const design=$("design").value;
+  const L={e1:$("lE1").value||"Expuestos", e0:$("lE0").value||"No expuestos"};
+
+  // Porcentajes
+  $("pctTable").innerHTML=`<tr><th></th><th>% fila (${design==="cc"?"casos":"sí"})</th><th>% columna (expuestos)</th></tr>
+   <tr><td>${L.e1}</td><td>${pc(a/n1)}</td><td>${pc(a/m1)} <span class="note"> de ${design==="cc"?"casos":"enfermos"}</span></td></tr>
+   <tr><td>${L.e0}</td><td>${pc(c/n0)}</td><td>${pc(b/m0)} <span class="note"> de ${design==="cc"?"controles":"no enfermos"}</span></td></tr>`;
+
+  // Esperadas
+  const E=[n1*m1/n, n1*m0/n, n0*m1/n, n0*m0/n], minE=Math.min(...E);
+  $("expTable").innerHTML=`<tr><th></th><th>${$("hO1").textContent}</th><th>${$("hO0").textContent}</th></tr>
+   <tr><td>${L.e1}</td><td>${fmt(E[0],2)}</td><td>${fmt(E[1],2)}</td></tr>
+   <tr><td>${L.e0}</td><td>${fmt(E[2],2)}</td><td>${fmt(E[3],2)}</td></tr>`;
+
+  // Medidas (Haldane si hay ceros)
+  const zero=[a,b,c,d].includes(0);
+  const A=zero?a+.5:a, B=zero?b+.5:b, C=zero?c+.5:c, D=zero?d+.5:d;
+  const OR=(a*d)/(b*c), ORh=(A*D)/(B*C), seOR=Math.sqrt(1/A+1/B+1/C+1/D);
+  const ORlo=Math.exp(Math.log(ORh)-z*seOR), ORhi=Math.exp(Math.log(ORh)+z*seOR);
+  const Ie=a/n1, Io=c/n0, RR=Ie/Io;
+  const RRh=(A/(A+B))/(C/(C+D)), seRR=Math.sqrt(1/A-1/(A+B)+1/C-1/(C+D));
+  const RRlo=Math.exp(Math.log(RRh)-z*seRR), RRhi=Math.exp(Math.log(RRh)+z*seRR);
+  const ciP=(p,N)=>[p-z*Math.sqrt(p*(1-p)/N), p+z*Math.sqrt(p*(1-p)/N)];
+  const [Ielo,Iehi]=ciP(Ie,n1), [Iolo,Iohi]=ciP(Io,n0);
+  const RA=Ie-Io, seRA=Math.sqrt(Ie*(1-Ie)/n1+Io*(1-Io)/n0);
+  const FA = RR>1 ? (RR-1)/RR : 1-RR;  // fracción atribuible en expuestos / fracción prevenida
+
+  const isCC=design==="cc", isTr=design==="trans";
+  const nameRR=isTr?"Razón de prevalencias (RP)":"Riesgo relativo (RR)";
+  const nameI=isTr?"Prevalencia":"Incidencia";
+  const mainIsOR=isCC;
+  const off=isCC?' class="off"':'';
+  $("measBody").innerHTML=`
+   <tr${mainIsOR?' class="main"':''}><td>Odds ratio (OR)</td><td>${fmt(OR)}</td><td>${fmt(ORlo)}</td><td>${fmt(ORhi)}</td></tr>
+   <tr${!mainIsOR?' class="main"':off}><td>${nameRR}</td><td>${fmt(RR)}</td><td>${fmt(RRlo)}</td><td>${fmt(RRhi)}</td></tr>
+   <tr${off}><td>${nameI} en expuestos (Ie = a/(a+b))</td><td>${fmt(Ie)}</td><td>${fmt(Math.max(0,Ielo))}</td><td>${fmt(Math.min(1,Iehi))}</td></tr>
+   <tr${off}><td>${nameI} en no expuestos (Io = c/(c+d))</td><td>${fmt(Io)}</td><td>${fmt(Math.max(0,Iolo))}</td><td>${fmt(Math.min(1,Iohi))}</td></tr>
+   <tr${off}><td>${isTr?"Diferencia de prevalencias":"Riesgo atribuible (RA = Ie − Io)"}</td><td>${fmt(RA)}</td><td>${fmt(RA-z*seRA)}</td><td>${fmt(RA+z*seRA)}</td></tr>
+   <tr${off}><td>${RR>1?"Fracción atribuible en expuestos (RR−1)/RR":"Fracción prevenida (1 − RR)"}</td><td>${pc(FA)}</td><td></td><td></td></tr>`;
+  $("measNote").textContent = isCC
+    ? "En un estudio de casos y controles no se conocen las incidencias, por lo que el RR no es válido: la medida de asociación es el OR (las filas grises se muestran solo como referencia)."
+    : (isTr ? "En un estudio transversal se calculan prevalencias: la RP ocupa el lugar del RR. El OR de prevalencia también es válido."
+            : "En un estudio de cohorte la medida principal es el RR (se calcula a partir de incidencias). El OR se muestra como referencia.");
+
+  // Chi cuadrado
+  const den=n1*n0*m1*m0, adbc=a*d-b*c;
+  const chi=n*adbc*adbc/den;
+  const yatesNum=Math.max(0,Math.abs(adbc)-n/2);
+  const chiY=n*yatesNum*yatesNum/den;
+  const chiMH=(n-1)*adbc*adbc/den;
+  const f=fisher(a,b,c,d);
+  const row=(name,x,p)=>`<tr><td>${name}</td><td>${x===null?"":fmt(x)}</td><td>${fmtP(p/2)}</td><td>${fmtP(p)}</td><td class="sig ${p<0.05?"y":"n"}">${p<0.05?"Significativo":"No signif."}</td></tr>`;
+  $("testBody").innerHTML =
+    row("χ² sin corregir (Pearson)",chi,pChi1(chi)).replace('<tr>','<tr class="main">') +
+    row("χ² Mantel-Haenszel",chiMH,pChi1(chiMH)) +
+    row("χ² corregido de Yates",chiY,pChi1(chiY)) +
+    `<tr><td>Prueba exacta de Fisher</td><td></td><td>${fmtP(f.one)}</td><td>${fmtP(f.two)}</td><td class="sig ${f.two<0.05?"y":"n"}">${f.two<0.05?"Significativo":"No signif."}</td></tr>`;
+
+  // Advertencias
+  let w="";
+  if(minE<5) w+=`<div class="warn">⚠ Hay frecuencias esperadas menores que 5 (mínima = ${fmt(minE,2)}). El χ² no es confiable: la significancia se juzga con la <b>prueba exacta de Fisher</b>.</div>`;
+  if(zero) w+=`<div class="warn">⚠ Hay una celda con valor 0. Los intervalos de confianza se calcularon con la corrección de Haldane (+0,5 en cada celda).</div>`;
+  $("warns").innerHTML=w;
+
+  // Interpretación
+  const useFisher=minE<5;
+  const p= useFisher ? f.two : pChi1(chi);
+  const testTxt= useFisher ? `prueba exacta de Fisher (p = ${fmtP(p)})` : `χ² = ${fmt(chi,3)} (p = ${fmtP(p)})`;
+  const M= mainIsOR ? {n:"OR",v:OR,lo:ORlo,hi:ORhi} : {n:isTr?"RP":"RR",v:RR,lo:RRlo,hi:RRhi};
+  const ciIncl1 = M.lo<=1 && M.hi>=1;
+  const sig = p<0.05;
+  const expo=$("lExp").value||"la exposición", out=($("lOut").value||"la enfermedad").toLowerCase();
+  const ciTxt=`${M.n} = ${fmt(M.v,2)} (IC ${lvl} %: ${fmt(M.lo,2)} – ${fmt(M.hi,2)})`;
+  let cls, title, body;
+  const magn = mainIsOR
+    ? (M.v>1 ? `los ${isCC?"casos":"enfermos"} tienen ${fmt(M.v,2)} veces más chances (odds) de haber estado expuestos que los ${isCC?"controles":"no enfermos"}`
+             : `la odds de exposición entre los ${isCC?"casos":"enfermos"} es ${fmt(M.v,2)} veces la de los ${isCC?"controles":"no enfermos"} (${pc(1-M.v)} menor)`)
+    : (M.v>1 ? `el grupo «${L.e1}» tiene ${fmt(M.v,2)} veces ${isTr?"la prevalencia":"el riesgo"} de ${out} que el grupo «${L.e0}»`
+             : `el grupo «${L.e1}» tiene ${isTr?"una prevalencia":"un riesgo"} de ${out} ${pc(1-M.v)} menor que el grupo «${L.e0}»`);
+  if(M.v===1 || !isFinite(M.v)){
+    cls="v-neu"; title="Sin asociación"; body=`${ciTxt}. No hay diferencia entre expuestos y no expuestos.`;
+  } else if(sig && !ciIncl1){
+    if(M.v>1){ cls="v-risk"; title="FACTOR DE RIESGO"; }
+    else { cls="v-prot"; title="FACTOR DE PROTECCIÓN"; }
+    body=`${ciTxt}; ${testTxt} &lt; 0,05.<br>La asociación es <b>estadísticamente significativa</b>: se rechaza H₀. Como ${M.n} ${M.v>1?"&gt;":"&lt;"} 1 y el intervalo de confianza no incluye al 1, <b>${L.e1}</b> (frente a ${L.e0}) se comporta como ${M.v>1?"factor de riesgo":"factor de protección"} para ${out}: ${magn}.`;
+  } else if(!sig && ciIncl1){
+    cls="v-neu"; title="Asociación NO significativa";
+    body=`${ciTxt}; ${testTxt} ≥ 0,05.<br>No se rechaza H₀. Aunque el ${M.n} es ${M.v>1?"mayor":"menor"} que 1, el intervalo de confianza <b>incluye al 1</b>, por lo que la diferencia puede deberse al azar: <b>no puede afirmarse que «${L.e1}» sea un factor de ${M.v>1?"riesgo":"protección"}</b> con estos datos.`;
+  } else {
+    cls="v-neu"; title="Resultado en el límite";
+    body=`${ciTxt}; ${testTxt}.<br>La prueba de hipótesis y el intervalo de confianza no coinciden (caso límite, ocurre cuando p está muy cerca de 0,05). Conviene interpretar con cautela y${useFisher?"":" revisar también la prueba de Fisher o"} aumentar el tamaño de la muestra. Tendencia observada: ${M.v>1?"riesgo":"protección"}.`;
+  }
+  const v=$("verdict"); v.className="verdict "+cls; v.innerHTML=`<h2>${title}</h2>${body}`;
+
+  // Paso a paso
+  const N=x=>String(x).replace(".", ",");
+  $("steps").innerHTML=`
+<b>Totales marginales</b><br>
+(a+b) = ${a} + ${b} = ${n1} &nbsp;·&nbsp; (c+d) = ${c} + ${d} = ${n0} &nbsp;·&nbsp; (a+c) = ${a} + ${c} = ${m1} &nbsp;·&nbsp; (b+d) = ${b} + ${d} = ${m0} &nbsp;·&nbsp; n = ${n}<br><br>
+<b>Chi cuadrado (fórmula simplificada 2×2)</b><br>
+a·d = ${a} × ${d} = ${a*d}<br>
+b·c = ${b} × ${c} = ${b*c}<br>
+(ad − bc) = ${adbc}<br>
+(ad − bc)² = ${N(adbc*adbc)}<br>
+n·(ad − bc)² = ${N(n*adbc*adbc)}<br>
+(a+b)(c+d)(a+c)(b+d) = ${n1} × ${n0} × ${m1} × ${m0} = ${N(den)}<br>
+χ² = ${N(n*adbc*adbc)} / ${N(den)} = <b>${fmt(chi)}</b> → ${chi>=3.841?"≥":"&lt;"} 3,841 → ${chi>=3.841?"significativo":"no significativo"} (p = ${fmtP(pChi1(chi))})<br><br>
+<b>Incidencias / riesgos</b><br>
+Ie = a/(a+b) = ${a}/${n1} = ${fmt(Ie)} &nbsp;·&nbsp; Io = c/(c+d) = ${c}/${n0} = ${fmt(Io)}<br>
+RR = Ie / Io = ${fmt(Ie)} / ${fmt(Io)} = <b>${fmt(RR)}</b><br>
+EE[ln RR] = √(1/a − 1/(a+b) + 1/c − 1/(c+d)) = ${fmt(seRR)}<br>
+IC ${lvl} % = e^(ln ${fmt(RRh)} ± ${fmt(z,3)}·${fmt(seRR)}) = ${fmt(RRlo)} – ${fmt(RRhi)}<br><br>
+<b>Odds ratio</b><br>
+OR = (a·d)/(b·c) = ${a*d}/${b*c} = <b>${fmt(OR)}</b><br>
+EE[ln OR] = √(1/a + 1/b + 1/c + 1/d) = ${fmt(seOR)}<br>
+IC ${lvl} % = e^(ln ${fmt(ORh)} ± ${fmt(z,3)}·${fmt(seOR)}) = ${fmt(ORlo)} – ${fmt(ORhi)}<br><br>
+<b>Riesgo atribuible</b><br>
+RA = Ie − Io = ${fmt(Ie)} − ${fmt(Io)} = ${fmt(RA)} &nbsp;(IC ${lvl} %: ${fmt(RA-z*seRA)} – ${fmt(RA+z*seRA)})`;
+}
+
+["a","b","c","d","lExp","lE1","lE0","lOut"].forEach(id=>$(id).addEventListener("input",calc));
+["design","conf"].forEach(id=>$(id).addEventListener("change",calc));
+$("ex1").onclick=()=>{
+  $("lExp").value="Tipo de lactancia"; $("lE1").value="Mamadera"; $("lE0").value="Pecho"; $("lOut").value="Insuficiencia respiratoria";
+  $("a").value=249; $("b").value=221; $("c").value=51; $("d").value=103; $("design").value="cohorte"; calc();
+};
+$("clear").onclick=()=>{ ["a","b","c","d"].forEach(k=>$(k).value=""); calc(); $("a").focus(); };
+// Enter salta a la siguiente celda
+["a","b","c","d"].forEach((k,i,arr)=>$(k).addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); const nx=arr[i+1]; if(nx) $(nx).focus(); } }));
+$("ex1").click();
+</script>
+</body>
+</html>
